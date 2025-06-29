@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="查詢天使數字的意義，探索神秘數字背後的訊息">
+    <meta name="keywords" content="天使數字,靈數,占卜,心靈">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    
+    <title>天使數字查詢 ✨</title>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>✨ 天使數字查詢 ✨</h1>
+            <p>探索天使數字的神秘意義</p>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" id="search-nav">🔍 查詢</button>
+            <button class="nav-tab" id="history-nav">📋 歷史記錄</button>
+            <button class="nav-tab" id="manage-nav">⚙️ 管理數字</button> <!-- 新增管理分頁 -->
+        </nav>
+
+        <main>
+            <!-- 查詢頁面內容 -->
+            <div id="search-tab" class="tab-content active">
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="searchBox" 
+                        class="search-box" 
+                        placeholder="輸入天使數字 (例如: 111, 222, 333...)"
+                    >
+                </div>
+                <div id="resultContainer" class="result-container">
+                    <div id="angelNumber" class="angel-number"></div>
+                    <div id="angelMeaning" class="angel-meaning"></div>
+                </div>
+            </div>
+
+            <!-- 歷史記錄頁面內容 -->
+            <div id="history-tab" class="tab-content">
+                <div class="controls">
+                    <button class="btn btn-secondary" id="clearBtn">🗑️ 清除記錄</button>
+                </div>
+                <div id="historyContainer" class="history-container">
+                    <div class="no-history">目前沒有查詢記錄</div>
+                </div>
+            </div>
+
+            <!-- 新增管理數字頁面內容 -->
+            <div id="manage-tab" class="tab-content">
+                <div class="manage-header">
+                    <h2>管理天使數字</h2>
+                    <p>編輯或新增您的個人天使數字資料。</p>
+                    <div class="manage-info">
+                        <span id="manageDbCount"></span>
+                        <button class="btn btn-primary" id="uploadDbBtn">📁 匯入 CSV 資料</button> <!-- 保持匯入CSV按鈕 -->
+                    </div>
+                </div>
+                
+                <div class="manage-form-container">
+                    <h3>新增/編輯數字</h3>
+                    <form id="angelNumberForm" class="angel-number-form">
+                        <div class="form-group">
+                            <label for="formNumber">數字:</label>
+                            <input type="number" id="formNumber" required placeholder="例如: 111">
+                        </div>
+                        <div class="form-group">
+                            <label for="formMeaning">意義:</label>
+                            <textarea id="formMeaning" required placeholder="輸入這個數字的意義"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-success" id="saveNumberBtn">💾 儲存數字</button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">取消編輯</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="manage-list-container">
+                    <h3>所有天使數字</h3>
+                    <div id="manageNumberList" class="manage-number-list">
+                        <!-- 數字列表將由 JavaScript 動態生成 -->
+                        <div class="no-numbers">資料庫中目前沒有數字。</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 自定義模態對話框結構 -->
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage"></p>
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <!-- 按鈕會由 JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 檔案 -->
+    <!-- 關鍵修改：添加 type="module" -->
+    <script src="script.js" type="module"></script> 
+</body>
+</html>
