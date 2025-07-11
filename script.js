@@ -4,8 +4,8 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gsta
 import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, writeBatch, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // 全域變數
-let angelNumbers = {}; // 載入 Firestore 資料
-let searchHistory = []; // 載入 Firestore 資料
+let angelNumbers = {}; // 合併後的數據 (公共 + 個人)
+let searchHistory = []; // 載入 Firestore 歷史記錄
 
 // Firebase 服務實例
 let app;
@@ -13,6 +13,10 @@ let db;
 let auth;
 let userId = null; // 用戶 ID
 let isAuthReady = false; // 追蹤 Firebase Auth 是否已準備好
+
+// 用於快取公共和個人數據，以便合併
+let publicAngelNumbersCache = {}; 
+let personalAngelNumbersCache = {}; 
 
 // PWA: 註冊 Service Worker
 if ('serviceWorker' in navigator) {
@@ -31,8 +35,6 @@ if ('serviceWorker' in navigator) {
 let hasInitialized = false;
 
 // 初始化應用程式
-// 將 initializeApp 函數定義為一個內部函數或匿名函數，
-// 僅在 DOMContentLoaded 事件中被呼叫一次
 const initApp = async () => {
     if (hasInitialized) {
         console.warn("initializeApp 已經執行過，跳過重複執行。");
@@ -53,8 +55,8 @@ const initApp = async () => {
       measurementId: "G-D6J5D0FR23"
     };
 
-    // 定義應用程式 ID（用於 Firestore 路徑，本地測試時設為固定值）
-    const appId = firebaseConfig.projectId; // 從初始化後的 app 實例獲取 projectId 作為 appId
+    // 定義應用程式 ID（用於 Firestore 路徑）
+    const appId = firebaseConfig.projectId; 
 
     try {
         app = initializeApp(firebaseConfig);
@@ -66,9 +68,10 @@ const initApp = async () => {
             if (user) {
                 userId = user.uid;
                 console.log('Firebase: 已登入，用戶 ID:', userId);
+                console.log('您的管理員 ID (請複製此ID，用於Firebase規則):', userId); // 方便獲取管理員ID
                 isAuthReady = true;
                 // 身份驗證準備就緒後，開始載入資料和綁定事件
-                await loadAngelNumbersFromFirestore(appId, userId); // 從 Firestore 載入天使數字
+                loadAngelNumbersFromFirestore(appId, userId); // 從 Firestore 載入天使數字 (公共+個人)
                 loadHistoryFromFirestore(appId, userId); // 從 Firestore 載入歷史記錄
                 bindEventListeners(); // 綁定事件監聽器
                 showWelcomeMessage(); // 顯示歡迎訊息
@@ -93,37 +96,64 @@ const initApp = async () => {
 document.addEventListener('DOMContentLoaded', initApp);
 
 
-// 從 Firestore 載入天使數字 (即時監聽)
+// 從 Firestore 載入天使數字 (即時監聽公共和個人數據)
 async function loadAngelNumbersFromFirestore(appId, currentUserId) {
     if (!isAuthReady || !currentUserId) {
         console.warn('Firebase Auth 未準備好或用戶ID不存在，無法載入天使數字。');
         return;
     }
 
-    const angelNumbersCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/angelNumbers`);
-    
-    onSnapshot(angelNumbersCollectionRef, (snapshot) => {
-        const newAngelNumbers = {};
-        snapshot.forEach(doc => {
-            newAngelNumbers[doc.id] = doc.data().meaning;
+    const publicAngelNumbersCollectionRef = collection(db, `artifacts/${appId}/public/data/angelNumbers`);
+    const personalAngelNumbersCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/personalAngelNumbers`);
+
+    // 監聽公共資料庫的變化
+    onSnapshot(publicAngelNumbersCollectionRef, (publicSnapshot) => {
+        const newPublicNumbers = {};
+        publicSnapshot.forEach(doc => {
+            newPublicNumbers[doc.id] = doc.data().meaning;
         });
-        angelNumbers = newAngelNumbers;
-        console.log('Firestore: 天使數字資料庫已更新，共', Object.keys(angelNumbers).length, '筆資料');
-        
-        if (document.getElementById('manage-tab').classList.contains('active')) {
-            updateManageDashboard();
-            displayManageNumbers(); // 重新渲染列表
-        }
-        showWelcomeMessage(); // 更新歡迎訊息中的數字數量
+        publicAngelNumbersCache = newPublicNumbers; // 更新公共數據快取
+        mergeAngelNumbersData(); // 觸發數據合併
     }, (error) => {
-        console.error('Firestore: 監聽天使數字資料失敗:', error);
+        console.error('Firestore: 監聽公共天使數字資料失敗:', error);
         showDatabaseError(); // 顯示錯誤訊息
+    });
+
+    // 監聽個人資料庫的變化
+    onSnapshot(personalAngelNumbersCollectionRef, (personalSnapshot) => {
+        const newPersonalNumbers = {};
+        personalSnapshot.forEach(doc => {
+            newPersonalNumbers[doc.id] = doc.data().meaning;
+        });
+        personalAngelNumbersCache = newPersonalNumbers; // 更新個人數據快取
+        mergeAngelNumbersData(); // 觸發數據合併
+    }, (error) => {
+        console.error('Firestore: 監聽個人天使數字資料失敗:', error);
+        // 不顯示 showDatabaseError，因為個人資料庫可能為空，不代表連接失敗
     });
 }
 
-// 載入預設資料庫（備用方案 - 僅在 Firestore 初始化失敗時顯示，不寫入 Firestore）
-function loadDefaultDatabase() { // 這個函數現在沒有被直接使用，因為我們預期 Firebase 會正常工作
-    // ... (內容不變)
+// 合併公共和個人天使數字數據到 angelNumbers 變數
+function mergeAngelNumbersData() {
+    // 將公共數據複製一份作為基礎
+    const mergedNumbers = { ...publicAngelNumbersCache };
+
+    // 用個人數據覆蓋或新增公共數據
+    for (const number in personalAngelNumbersCache) {
+        if (Object.prototype.hasOwnProperty.call(personalAngelNumbersCache, number)) {
+            mergedNumbers[number] = personalAngelNumbersCache[number];
+        }
+    }
+    angelNumbers = mergedNumbers; // 更新全局 angelNumbers 變數
+
+    console.log('Firestore: 合併後的天使數字資料庫已更新，共', Object.keys(angelNumbers).length, '筆資料');
+
+    // 確保在載入後更新管理頁面的數字數量和顯示
+    if (document.getElementById('manage-tab').classList.contains('active')) {
+        updateManageDashboard();
+        displayManageNumbers(); // 重新渲染列表
+    }
+    showWelcomeMessage(); // 更新歡迎訊息中的數字數量
 }
 
 
@@ -198,10 +228,10 @@ function bindEventListeners() {
     document.getElementById('manage-nav').addEventListener('click', () => switchTab('manage')); // 新增管理分頁導航
     
     // 控制按鈕事件
+    // 移除 document.getElementById('exportBtn').addEventListener('click', exportToExcel);
     document.getElementById('clearBtn').addEventListener('click', clearHistory);
     
-    // 管理分頁按鈕事件
-    document.getElementById('uploadDbBtn').addEventListener('click', showUploadCsvDialog); // 匯入 CSV 按鈕
+    // 管理分頁按鈕事件 (已移除匯入 CSV 按鈕的事件綁定)
     document.getElementById('angelNumberForm').addEventListener('submit', handleSaveAngelNumber); // 儲存數字表單
     document.getElementById('cancelEditBtn').addEventListener('click', clearManageForm); // 取消編輯按鈕
 
@@ -209,7 +239,8 @@ function bindEventListeners() {
     document.getElementById('modalCloseBtn').addEventListener('click', hideModal);
 }
 
-// 顯示匯入 CSV 對話框 (取代舊的 showUploadDialog)
+// 移除顯示匯入 CSV 對話框函數 (不再需要)
+/*
 function showUploadCsvDialog() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -217,14 +248,16 @@ function showUploadCsvDialog() {
     input.onchange = function(e) {
         const file = e.target.files[0];
         if (file) {
-            importCsvToFirestore(file); // 呼叫新的匯入函數
+            importCsvToPersonalFirestore(file); // 匯入到個人資料庫
         }
     };
     input.click();
 }
+*/
 
-// 匯入 CSV 資料到 Firestore
-async function importCsvToFirestore(file) {
+// 移除匯入 CSV 資料到個人 Firestore 資料庫函數 (不再需要)
+/*
+async function importCsvToPersonalFirestore(file) {
     if (!isAuthReady || !userId) {
         showCustomAlert('用戶未登入，無法更新資料。');
         return;
@@ -237,19 +270,19 @@ async function importCsvToFirestore(file) {
         const newDatabase = parseCSV(text); // 使用現有的 CSV 解析函數
 
         if (Object.keys(newDatabase).length === 0) {
-            showCustomAlert('檔案格式錯誤或沒有有效資料');
+            showCustomAlert('檔案格式錯誤或沒有有效資料。');
             return;
         }
 
         const currentAppId = app.options.projectId; 
-        const angelNumbersCollectionRef = collection(db, `artifacts/${currentAppId}/users/${userId}/angelNumbers`);
+        const personalAngelNumbersCollectionRef = collection(db, `artifacts/${currentAppId}/users/${userId}/personalAngelNumbers`);
         const batch = writeBatch(db);
         let importCount = 0;
 
         for (const number in newDatabase) {
             if (Object.prototype.hasOwnProperty.call(newDatabase, number)) {
                 const meaning = newDatabase[number];
-                const docRef = doc(angelNumbersCollectionRef, number); // 使用數字作為文檔 ID
+                const docRef = doc(personalAngelNumbersCollectionRef, number); // 使用數字作為文檔 ID
                 batch.set(docRef, { meaning: meaning });
                 importCount++;
             }
@@ -262,6 +295,7 @@ async function importCsvToFirestore(file) {
         showCustomAlert('匯入檔案失敗：' + error.message);
     }
 }
+*/
 
 // 顯示歡迎訊息 (操作現有元素並恢復樣式)
 function showWelcomeMessage() {
@@ -293,8 +327,7 @@ function showWelcomeMessage() {
     angelMeaningEl.innerHTML = `
         <h2 style="color: #6366f1; margin-bottom: 15px;">歡迎來到天使數字查詢</h2>
         <p style="color: #64748b; font-size: 1.1rem; line-height: 1.6;">
-            在上方輸入你看到的數字組合，<br>
-            探索天使想要傳達給你的神聖訊息。
+            
         </p>
         <div style="margin-top: 25px; color: #94a3b8; font-size: 0.95rem;">
             資料庫已載入 ${databaseCount} 筆天使數字
@@ -329,12 +362,14 @@ function handleSearch() {
     }
 }
 
-// 查找天使數字意義
+// 查找天使數字意義 (會從合併後的 angelNumbers 變數中查找)
 function findAngelNumber(number) {
+    // 優先從合併後的 angelNumbers 查找
     if (angelNumbers[number]) {
         return angelNumbers[number];
     }
     
+    // 如果沒有精確匹配，嘗試近似模式
     if (number.length > 3) {
         const repeatedPattern = number.charAt(0).repeat(number.length);
         if (angelNumbers[repeatedPattern]) {
@@ -422,7 +457,7 @@ function showNotFound(number) {
         <h3 style="color: #f59e0b; margin-bottom: 15px;">數字 ${number}</h3>
         <p style="color: #64748b; line-height: 1.6;">
             抱歉，我們的資料庫中沒有這個天使數字的資料。<br>
-            你可以上傳自己的資料庫檔案來擴充內容。
+            您可以自行新增到您的個人資料庫中。
         </p>
     `;
     angelMeaningEl.style.backgroundColor = 'transparent';
@@ -559,14 +594,15 @@ function clearHistory() {
     );
 }
 
-// 匯出到 Excel (保留並從 Firestore 獲取數據)
+// 移除匯出到 Excel 的函數 (不再需要)
+/*
 function exportToExcel() {
     if (searchHistory.length === 0) {
         showCustomAlert('目前沒有記錄可以匯出');
         return;
     }
     
-    let csvContent = '\uFEFF'; // BOM for UTF-8 (確保中文顯示正確)
+    let csvContent = '\uFEFF';
     csvContent += '天使數字,意義,查詢時間\n';
     
     searchHistory.forEach(item => {
@@ -586,6 +622,7 @@ function exportToExcel() {
     link.click();
     document.body.removeChild(link);
 }
+*/
 
 /* --- 管理數字功能 --- */
 let editingNumberId = null; // 追蹤正在編輯的數字 ID
@@ -603,6 +640,7 @@ function displayManageNumbers() {
     const manageNumberList = document.getElementById('manageNumberList');
     manageNumberList.innerHTML = ''; // 清空現有列表
     
+    // 這裡顯示的是合併後的數據，但編輯/刪除只針對個人數據
     const sortedNumbers = Object.keys(angelNumbers).sort((a, b) => parseInt(a) - parseInt(b)); // 按數字大小排序
 
     if (sortedNumbers.length === 0) {
@@ -612,6 +650,9 @@ function displayManageNumbers() {
 
     sortedNumbers.forEach(number => {
         const meaning = angelNumbers[number];
+        // 判斷是否為個人數據，以便顯示編輯/刪除按鈕
+        const isPersonal = Object.prototype.hasOwnProperty.call(personalAngelNumbersCache, number);
+        
         const itemHtml = `
             <div class="manage-number-item" data-number="${number}">
                 <div class="manage-item-content">
@@ -619,15 +660,15 @@ function displayManageNumbers() {
                     <div class="manage-item-meaning">${meaning}</div>
                 </div>
                 <div class="manage-item-actions">
-                    <button class="btn btn-primary edit-btn">編輯</button>
-                    <button class="btn btn-secondary delete-btn">刪除</button>
+                    ${isPersonal ? `<button class="btn btn-primary edit-btn">編輯</button>` : ''}
+                    ${isPersonal ? `<button class="btn btn-secondary delete-btn">刪除</button>` : ''}
                 </div>
             </div>
         `;
         manageNumberList.insertAdjacentHTML('beforeend', itemHtml);
     });
 
-    // 為編輯和刪除按鈕綁定事件
+    // 為編輯和刪除按鈕綁定事件 (只針對個人數據)
     manageNumberList.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const numberToEdit = e.target.closest('.manage-number-item').dataset.number;
@@ -643,7 +684,7 @@ function displayManageNumbers() {
     });
 }
 
-// 處理儲存天使數字 (新增/編輯)
+// 處理儲存天使數字 (新增/編輯到個人資料庫)
 async function handleSaveAngelNumber(event) {
     event.preventDefault(); // 阻止表單預設提交行為
 
@@ -663,9 +704,9 @@ async function handleSaveAngelNumber(event) {
         return;
     }
 
-    // 檢查數字是否已經存在 (如果不是編輯模式)
-    if (editingNumberId === null && angelNumbers[number]) {
-        showCustomAlert(`數字 ${number} 已經存在，請使用編輯功能或輸入不同數字。`);
+    // 檢查數字是否已經存在於個人資料庫 (如果不是編輯模式)
+    if (editingNumberId === null && personalAngelNumbersCache[number]) {
+        showCustomAlert(`數字 ${number} 已經存在於您的個人資料庫中，請使用編輯功能或輸入不同數字。`);
         return;
     }
 
@@ -673,20 +714,21 @@ async function handleSaveAngelNumber(event) {
 
     try {
         const currentAppId = app.options.projectId;
-        const docRef = doc(db, `artifacts/${currentAppId}/users/${userId}/angelNumbers`, number);
+        const personalAngelNumbersCollectionRef = collection(db, `artifacts/${currentAppId}/users/${userId}/personalAngelNumbers`);
+        const docRef = doc(personalAngelNumbersCollectionRef, number); // 使用數字作為文檔 ID
         await setDoc(docRef, { meaning: meaning }); // setDoc 會自動覆蓋或新增
 
-        showCustomAlert(`數字 ${number} 已成功儲存！`);
+        showCustomAlert(`數字 ${number} 已成功儲存到您的個人資料庫！`);
         clearManageForm(); // 清空表單
     } catch (error) {
-        console.error('儲存天使數字到 Firestore 失敗:', error);
+        console.error('儲存天使數字到個人 Firestore 失敗:', error);
         showCustomAlert('儲存數字失敗：' + error.message);
     }
 }
 
-// 編輯天使數字
+// 編輯天使數字 (只針對個人資料庫中的數字)
 function editAngelNumber(number) {
-    const meaning = angelNumbers[number];
+    const meaning = personalAngelNumbersCache[number]; // 從個人快取中獲取意義
     if (meaning) {
         document.getElementById('formNumber').value = number;
         document.getElementById('formMeaning').value = meaning;
@@ -694,6 +736,8 @@ function editAngelNumber(number) {
         document.getElementById('saveNumberBtn').textContent = '💾 更新數字';
         document.getElementById('cancelEditBtn').style.display = 'inline-flex'; // 顯示取消按鈕
         showCustomAlert(`正在編輯數字 ${number}。`);
+    } else {
+        showCustomAlert('只能編輯您個人資料庫中的數字。');
     }
 }
 
@@ -706,8 +750,13 @@ function clearManageForm() {
     document.getElementById('cancelEditBtn').style.display = 'none'; // 隱藏取消按鈕
 }
 
-// 刪除天使數字
+// 刪除天使數字 (只針對個人資料庫中的數字)
 async function deleteAngelNumber(number) {
+    if (!Object.prototype.hasOwnProperty.call(personalAngelNumbersCache, number)) {
+        showCustomAlert('只能刪除您個人資料庫中的數字。');
+        return;
+    }
+
     showCustomConfirm(
         `確定要刪除數字 ${number} 及其意義嗎？此操作無法復原。`,
         async () => {
@@ -717,9 +766,10 @@ async function deleteAngelNumber(number) {
             }
             try {
                 const currentAppId = app.options.projectId;
-                const docRef = doc(db, `artifacts/${currentAppId}/users/${userId}/angelNumbers`, number);
+                const personalAngelNumbersCollectionRef = collection(db, `artifacts/${currentAppId}/users/${userId}/personalAngelNumbers`);
+                const docRef = doc(personalAngelNumbersCollectionRef, number);
                 await deleteDoc(docRef);
-                showCustomAlert(`數字 ${number} 已成功刪除。`);
+                showCustomAlert(`數字 ${number} 已成功從您的個人資料庫中刪除。`);
             } catch (error) {
                 console.error('刪除天使數字失敗:', error);
                 showCustomAlert('刪除數字失敗：' + error.message);

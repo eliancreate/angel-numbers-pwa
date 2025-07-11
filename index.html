@@ -1,35 +1,58 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW"> <!-- 告訴瀏覽器這是什麼語言-->
 <head>
-    <meta charset="UTF-8">
+    <!-- 告訴瀏覽器使用什麼編碼方式來儲存和顯示文字  UTF-8是最通用的-->
+    <meta charset="UTF-8"> 
+
+    <!--viewport = 檢視區域 讓網頁寬度 = 裝置螢幕寬度 初始縮放比例 = 1.0 (不縮放)-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO相關 告訴搜尋引擎這個網頁是在做什麼的 也是在分享時會顯示的簡介內容-->
     <meta name="description" content="查詢天使數字的意義，探索神秘數字背後的訊息">
     <meta name="keywords" content="天使數字,靈數,占卜,心靈">
+    
+    <!-- 品牌顏色  safari 不適用，所以下方要加上ios優化-->
     <meta name="theme-color" content="#6366f1">
+    
+    <!-- iOS 優化 -->
     <meta name="mobile-web-app-capable" content="yes">
+    <!-- 標籤告訴 iOS Safari，這個網頁可以作為「全螢幕網頁應用程式」運行
+    當用戶將網頁加入到主畫面時，開啟時會隱藏 Safari 的地址欄和工具列，看起來更像原生 App -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- 這個標籤控制 iOS 狀態列（顯示時間、電池等資訊的頂部區域）的外觀
+    black-translucent 表示狀態列會是半透明的黑色樣式，網頁內容會延伸到狀態列下方
+    這兩個標籤通常一起使用，目的是讓網頁在iOS 設備上有更接近原生應用程式的體驗。不過要注意的是，這些設定只在用戶將網頁「加入主畫面」後才會生效，直接用 Safari 瀏覽時不會有影響。 -->
     
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css"> 
+
+    <!-- PWA: Web App Manifest 連結 -->
     <link rel="manifest" href="manifest.json">
-    
+
     <title>天使數字查詢 ✨</title>
 </head>
 <body>
+    <!-- 主要容器 -->
     <div class="container">
+        
+        <!-- 網站標題區域 - 使用 <header> 標籤提升語義化 -->
         <header class="header">
             <h1>✨ 天使數字查詢 ✨</h1>
             <p>探索天使數字的神秘意義</p>
         </header>
 
+        <!-- 分頁導航按鈕 - 使用 <nav> 標籤提升語義化 -->
         <nav class="nav-tabs">
             <button class="nav-tab active" id="search-nav">🔍 查詢</button>
             <button class="nav-tab" id="history-nav">📋 歷史記錄</button>
-            <button class="nav-tab" id="manage-nav">⚙️ 管理數字</button> <!-- 新增管理分頁 -->
+            <button class="nav-tab" id="manage-nav">⚙️ 管理數字</button> <!-- 新增管理分頁導航 -->
         </nav>
 
+        <!-- 主要內容區域 - 使用 <main> 標籤包裹主要內容 -->
         <main>
             <!-- 查詢頁面內容 -->
             <div id="search-tab" class="tab-content active">
+                
+                <!-- 搜尋框區域 -->
                 <div class="search-container">
                     <input 
                         type="text" 
@@ -38,55 +61,59 @@
                         placeholder="輸入天使數字 (例如: 111, 222, 333...)"
                     >
                 </div>
+                
+                <!-- 搜尋結果顯示區域 -->
                 <div id="resultContainer" class="result-container">
                     <div id="angelNumber" class="angel-number"></div>
                     <div id="angelMeaning" class="angel-meaning"></div>
                 </div>
+                
             </div>
 
             <!-- 歷史記錄頁面內容 -->
             <div id="history-tab" class="tab-content">
+                
+                <!-- 控制按鈕區域 -->
                 <div class="controls">
+                    <!-- 移除 📊 匯出到 Excel 按鈕 -->
                     <button class="btn btn-secondary" id="clearBtn">🗑️ 清除記錄</button>
                 </div>
+                
+                <!-- 歷史記錄列表區域 -->
                 <div id="historyContainer" class="history-container">
                     <div class="no-history">目前沒有查詢記錄</div>
                 </div>
+                
             </div>
 
-            <!-- 新增管理數字頁面內容 -->
+            <!-- 管理數字頁面內容 -->
             <div id="manage-tab" class="tab-content">
-                <div class="manage-header">
-                    <h2>管理天使數字</h2>
-                    <p>編輯或新增您的個人天使數字資料。</p>
-                    <div class="manage-info">
-                        <span id="manageDbCount"></span>
-                        <button class="btn btn-primary" id="uploadDbBtn">📁 匯入 CSV 資料</button> <!-- 保持匯入CSV按鈕 -->
-                    </div>
+                <div class="manage-dashboard">
+                    <p id="manageDbCount">資料庫中共有 0 筆數字</p>
                 </div>
-                
+
                 <div class="manage-form-container">
-                    <h3>新增/編輯數字</h3>
-                    <form id="angelNumberForm" class="angel-number-form">
+                    <h3>新增/編輯個人天使數字</h3>
+                    <form id="angelNumberForm">
                         <div class="form-group">
-                            <label for="formNumber">數字:</label>
-                            <input type="number" id="formNumber" required placeholder="例如: 111">
+                            <label for="formNumber">天使數字:</label>
+                            <input type="number" id="formNumber" required placeholder="例如: 123">
                         </div>
                         <div class="form-group">
                             <label for="formMeaning">意義:</label>
-                            <textarea id="formMeaning" required placeholder="輸入這個數字的意義"></textarea>
+                            <textarea id="formMeaning" required rows="4" placeholder="輸入此天使數字的意義..."></textarea>
                         </div>
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-success" id="saveNumberBtn">💾 儲存數字</button>
-                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">取消編輯</button>
+                            <button type="submit" class="btn btn-primary" id="saveNumberBtn">💾 儲存數字</button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display: none;">取消</button>
                         </div>
                     </form>
                 </div>
 
                 <div class="manage-list-container">
-                    <h3>所有天使數字</h3>
+                    <h3>您的天使數字列表</h3>
                     <div id="manageNumberList" class="manage-number-list">
-                        <!-- 數字列表將由 JavaScript 動態生成 -->
+                        <!-- 數字列表會由 JS 動態載入 -->
                         <div class="no-numbers">資料庫中目前沒有數字。</div>
                     </div>
                 </div>
@@ -111,7 +138,6 @@
     </div>
 
     <!-- JavaScript 檔案 -->
-    <!-- 關鍵修改：添加 type="module" -->
-    <script src="script.js" type="module"></script> 
+    <script type="module" src="script.js"></script> 
 </body>
 </html>

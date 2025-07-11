@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員：匯入天使數字公共資料庫</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: calc(100% - 20px);
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #statusMessage {
+            margin-top: 20px;
+            color: #333;
+            font-weight: bold;
+        }
+        .error {
+            color: #d9534f;
+        }
+        .success {
+            color: #5cb85c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>管理員：匯入天使數字公共資料庫</h1>
+        <p>請在此匯入包含您完整天使數字資料的 CSV 檔案。此操作將把數據寫入公共資料庫，供所有用戶讀取。</p>
+        <p style="color: #d9534f; font-weight: bold;">請確保您已在 Firebase 規則中將當前用戶 ID 設置為管理員寫入權限！</p>
+        <input type="file" id="csvFile" accept=".csv">
+        <button id="importBtn">開始匯入</button>
+        <div id="statusMessage"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, collection, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // 您的 Firebase 配置 (請替換為您自己的配置)
+        const firebaseConfig = {
+          apiKey: "AIzaSyBYjCiWrPiiE-I3uUWy_rlNb6AQqvqk1G0",
+          authDomain: "angel-numbers-web.firebaseapp.com",
+          projectId: "angel-numbers-web",
+          storageBucket: "angel-numbers-web.firebasestorage.app",
+          messagingSenderId: "663638896587",
+          appId: "1:663638896587:web:9d50b06e350b826875104e",
+          measurementId: "G-D6J5D0FR23"
+        };
+
+        // 您的應用程式 ID (應與主應用程式中的 appId 相同)
+        const appId = firebaseConfig.projectId; // 確保與主應用程式的 appId 一致
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const statusMessage = document.getElementById('statusMessage');
+        const importBtn = document.getElementById('importBtn');
+        const csvFile = document.getElementById('csvFile');
+
+        let currentUserId = null;
+
+        // 匿名登入以獲取用戶 ID
+        signInAnonymously(auth).then(userCredential => {
+            currentUserId = userCredential.user.uid;
+            console.log("已匿名登入，用戶 ID:", currentUserId);
+            statusMessage.textContent = `請確保您的 Firebase 規則中的 'YOUR_ADMIN_USER_ID' 是 '${currentUserId}'。`;
+            statusMessage.className = 'success';
+        }).catch(error => {
+            console.error("匿名登入失敗:", error);
+            statusMessage.textContent = "錯誤：無法登入 Firebase。請檢查網路或配置。";
+            statusMessage.className = 'error';
+            importBtn.disabled = true;
+        });
+
+        importBtn.addEventListener('click', async () => {
+            const file = csvFile.files[0];
+            if (!file) {
+                statusMessage.textContent = "請選擇一個 CSV 檔案。";
+                statusMessage.className = 'error';
+                return;
+            }
+
+            if (!currentUserId) {
+                statusMessage.textContent = "錯誤：用戶未登入。";
+                statusMessage.className = 'error';
+                return;
+            }
+
+            statusMessage.textContent = "正在匯入資料，請稍候...";
+            statusMessage.className = '';
+            importBtn.disabled = true;
+
+            try {
+                const text = await file.text();
+                const dataToImport = parseCSV(text);
+
+                if (Object.keys(dataToImport).length === 0) {
+                    statusMessage.textContent = "檔案格式錯誤或沒有有效資料。";
+                    statusMessage.className = 'error';
+                    importBtn.disabled = false;
+                    return;
+                }
+
+                // 目標是公共集合
+                const publicAngelNumbersCollectionRef = collection(db, `artifacts/${appId}/public/data/angelNumbers`);
+                const batch = writeBatch(db);
+                let importCount = 0;
+
+                for (const number in dataToImport) {
+                    if (Object.prototype.hasOwnProperty.call(dataToImport, number)) {
+                        const meaning = dataToImport[number];
+                        const docRef = doc(publicAngelNumbersCollectionRef, number); // 使用數字作為文檔 ID
+                        batch.set(docRef, { meaning: meaning });
+                        importCount++;
+                    }
+                }
+                
+                await batch.commit();
+                statusMessage.textContent = `成功匯入 ${importCount} 筆天使數字資料到公共資料庫！`;
+                statusMessage.className = 'success';
+            } catch (error) {
+                console.error('匯入檔案到 Firestore 失敗:', error);
+                statusMessage.textContent = `匯入失敗：${error.message}。請檢查 Firebase 規則和網路。`;
+                statusMessage.className = 'error';
+            } finally {
+                importBtn.disabled = false;
+            }
+        });
+
+        // CSV 解析函數 (與主應用程式相同)
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            const database = {};
+            for (let i = 1; i < lines.length; i++) { // 從第二行開始解析，跳過標題
+                const line = lines[i].trim();
+                if (line) {
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const number = parts[0].trim();
+                        const meaning = parts.slice(1).join(',').trim();
+                        if (number && meaning) {
+                            database[number] = meaning;
+                        }
+                    }
+                }
+            }
+            return database;
+        }
+    </script>
+</body>
+</html>
