@@ -213,14 +213,20 @@ function showDatabaseError() {
 
 // 綁定所有事件監聽器
 function bindEventListeners() {
-    // 搜尋框事件
     const searchBox = document.getElementById('searchBox');
-    searchBox.addEventListener('input', handleSearch);
+    const searchButton = document.getElementById('searchButton'); // 獲取新的搜尋按鈕
+
+    // 搜尋框事件：移除 input 事件的防抖，只保留 keypress Enter
     searchBox.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            handleSearch();
+            handleSearch(); // 按下 Enter 鍵時觸發搜尋
         }
     });
+
+    // 新增：搜尋按鈕點擊事件
+    if (searchButton) {
+        searchButton.addEventListener('click', handleSearch);
+    }
     
     // 分頁導航事件
     document.getElementById('search-nav').addEventListener('click', () => switchTab('search'));
@@ -228,10 +234,9 @@ function bindEventListeners() {
     document.getElementById('manage-nav').addEventListener('click', () => switchTab('manage')); // 新增管理分頁導航
     
     // 控制按鈕事件
-    // 移除 document.getElementById('exportBtn').addEventListener('click', exportToExcel);
     document.getElementById('clearBtn').addEventListener('click', clearHistory);
     
-    // 管理分頁按鈕事件 (已移除匯入 CSV 按鈕的事件綁定)
+    // 管理分頁按鈕事件
     document.getElementById('angelNumberForm').addEventListener('submit', handleSaveAngelNumber); // 儲存數字表單
     document.getElementById('cancelEditBtn').addEventListener('click', clearManageForm); // 取消編輯按鈕
 
@@ -327,7 +332,7 @@ function showWelcomeMessage() {
     angelMeaningEl.innerHTML = `
         <h2 style="color: #6366f1; margin-bottom: 15px;">歡迎來到天使數字查詢</h2>
         <p style="color: #64748b; font-size: 1.1rem; line-height: 1.6;">
-            
+            <!-- 這裡的文字已經被移除，只留下空行 -->
         </p>
         <div style="margin-top: 25px; color: #94a3b8; font-size: 0.95rem;">
             資料庫已載入 ${databaseCount} 筆天使數字

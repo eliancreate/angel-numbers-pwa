@@ -85,13 +85,15 @@ main .tab-content.active {
     display: block; /* 激活狀態顯示 */
 }
 
-/* 搜尋框區域 */
+/* 搜尋框區域 - 更新為 Flexbox 佈局 */
 .search-container {
     margin-bottom: 30px; /* 底部外邊距 */
+    display: flex; /* 彈性佈局 */
+    gap: 10px; /* 輸入框和按鈕之間的間距 */
 }
 
 .search-box {
-    width: 100%; /* 寬度佔滿父容器 */
+    flex: 1; /* 讓輸入框佔據所有可用空間 */
     padding: 15px 20px; /* 內邊距 */
     font-size: 1.1rem; /* 字體大小 */
     border: 2px solid #e2e8f0; /* 邊框 */
@@ -150,102 +152,88 @@ main .tab-content.active {
 }
 
 .btn {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap; /* 防止按鈕內的文字換行 */
+    padding: 12px 20px; /* 內邊距 */
+    border: none; /* 無邊框 */
+    border-radius: 8px; /* 圓角 */
+    font-size: 0.95rem; /* 字體大小 */
+    font-weight: 600; /* 字體粗細 */
+    cursor: pointer; /* 鼠標指針 */
+    transition: all 0.3s ease; /* 平滑過渡效果 */
+    display: inline-flex; /* 行內彈性佈局 */
+    align-items: center; /* 垂直居中對齊 */
+    gap: 8px; /* 圖標與文字間距 */
 }
 
-.btn-success {
-    background: #10b981;
-    color: white;
-}
-
-.btn-success:hover {
-    background: #059669;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.btn-secondary {
-    background: #6b7280;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #4b5563;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-}
-
-/* 新增的主要按鈕樣式 (例如用於更新資料庫) */
-.btn-primary {
-    background: #3b82f6; /* 藍色 */
-    color: white;
+.btn-primary { /* 主要按鈕樣式 */
+    background: #6366f1; /* 主要按鈕背景色 */
+    color: white; /* 文字顏色 */
 }
 
 .btn-primary:hover {
-    background: #2563eb; /* 懸停時更深的藍色 */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background: #4f46e5; /* 懸停背景色 */
+    transform: translateY(-2px); /* 向上微移 */
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); /* 懸停陰影 */
 }
 
+.btn-secondary {
+    background: #6b7280; /* 次要按鈕背景色 */
+    color: white; /* 文字顏色 */
+}
+
+.btn-secondary:hover {
+    background: #4b5563; /* 懸停背景色 */
+    transform: translateY(-2px); /* 向上微移 */
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3); /* 懸停陰影 */
+}
 
 /* 歷史記錄容器 */
 .history-container {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 20px;
-    min-height: 300px;
+    background: #f8fafc; /* 背景色 */
+    border-radius: 12px; /* 圓角 */
+    padding: 20px; /* 內邊距 */
+    min-height: 300px; /* 最小高度 */
 }
 
 .no-history {
-    text-align: center;
-    color: #94a3b8;
-    font-size: 1.1rem;
-    padding: 60px 20px;
+    text-align: center; /* 文字居中 */
+    color: #94a3b8; /* 文字顏色 */
+    font-size: 1.1rem; /* 字體大小 */
+    padding: 60px 20px; /* 內邊距 */
 }
 
 .history-item {
-    background: white;
-    border-radius: 8px;
-    padding: 15px 20px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    border-left: 4px solid #6366f1;
-    transition: all 0.3s ease;
+    background: white; /* 背景色 */
+    border-radius: 8px; /* 圓角 */
+    padding: 15px 20px; /* 內邊距 */
+    margin-bottom: 12px; /* 底部外邊距 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* 陰影 */
+    border-left: 4px solid #6366f1; /* 左側邊框 */
+    transition: all 0.3s ease; /* 平滑過渡效果 */
 }
 
 .history-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateX(5px); /* 向右微移 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 懸停陰影 */
 }
 
 .history-number {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #6366f1;
-    margin-bottom: 8px;
+    font-size: 1.5rem; /* 字體大小 */
+    font-weight: bold; /* 字體粗細 */
+    color: #6366f1; /* 文字顏色 */
+    margin-bottom: 8px; /* 底部外邊距 */
 }
 
 .history-meaning {
-    color: #64748b;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    margin-bottom: 8px;
+    color: #64748b; /* 文字顏色 */
+    font-size: 0.95rem; /* 字體大小 */
+    line-height: 1.5; /* 行高 */
+    margin-bottom: 8px; /* 底部外邊距 */
 }
 
 .history-date {
-    font-size: 0.85rem;
-    color: #94a3b8;
-    text-align: right;
+    font-size: 0.85rem; /* 字體大小 */
+    color: #94a3b8; /* 文字顏色 */
+    text-align: right; /* 文字靠右 */
 }
 
 /* --- 管理數字頁面樣式 --- */
@@ -284,7 +272,7 @@ main .tab-content.active {
 
 .form-group input[type="number"],
 .form-group textarea {
-    width: 100%;
+    width: 100%; /* 確保輸入框和文字區域佔滿可用寬度 */
     padding: 12px 15px;
     font-size: 1rem;
     border: 2px solid #e2e8f0;
@@ -494,79 +482,11 @@ main .tab-content.active {
     box-shadow: 0 3px 8px rgba(100, 116, 139, 0.1);
 }
 
-/* 響應式設計 */
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-    
-    .container {
-        border-radius: 15px;
-    }
-    
-    header.header h1 {
-        font-size: 2rem;
-    }
-    
-    header.header {
-        padding: 30px 15px;
-    }
-    
-    main .tab-content {
-        padding: 20px 15px;
-    }
-    
-    .nav-tab {
-        padding: 12px 15px;
-        font-size: 0.9rem;
-    }
-    
-    .angel-number {
-        font-size: 2.5rem;
-    }
-    
-    .controls {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .modal-content {
-        padding: 20px;
-    }
-
-    .modal-header h3 {
-        font-size: 1.5rem;
-    }
-    .modal-btn {
-        padding: 8px 15px;
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 480px) {
-    header.header h1 {
-        font-size: 1.8rem;
-    }
-    
-    .angel-number {
-        font-size: 2rem;
-    }
-    
-    .search-box {
-        font-size: 1rem;
-        padding: 12px 15px;
-    }
-}
-
-/* 全局動畫 */
+/* 動畫 */
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
@@ -577,8 +497,83 @@ main .tab-content.active {
 @keyframes fadeIn {
     from {
         opacity: 0;
+        transform: scale(0.9);
     }
     to {
         opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px; /* 調整頁面內邊距 */
+    }
+    
+    .container {
+        border-radius: 15px; /* 調整容器圓角 */
+    }
+    
+    header.header h1 { /* 更新選擇器 */
+        font-size: 2rem; /* 調整標題字體大小 */
+    }
+    
+    header.header { /* 更新選擇器 */
+        padding: 30px 15px; /* 調整標題內邊距 */
+    }
+    
+    main .tab-content { /* 更新選擇器 */
+        padding: 20px 15px; /* 調整分頁內容內邊距 */
+    }
+    
+    .nav-tab {
+        padding: 12px 15px; /* 調整導航按鈕內邊距 */
+        font-size: 0.9rem; /* 調整導航按鈕字體大小 */
+    }
+    
+    .angel-number {
+        font-size: 2.5rem; /* 調整天使數字字體大小 */
+    }
+    
+    .controls {
+        flex-direction: column; /* 控制按鈕垂直排列 */
+    }
+    
+    .btn {
+        width: 100%; /* 按鈕寬度佔滿 */
+        justify-content: center; /* 按鈕內容居中 */
+    }
+
+    .search-container {
+        flex-direction: column; /* 在小螢幕上垂直堆疊 */
+    }
+
+    .search-box {
+        margin-bottom: 10px; /* 輸入框下方間距 */
+    }
+}
+
+@media (max-width: 480px) {
+    header.header h1 { /* 更新選擇器 */
+        font-size: 1.8rem; /* 進一步調整標題字體大小 */
+    }
+    
+    .angel-number {
+        font-size: 2rem; /* 進一步調整天使數字字體大小 */
+    }
+    
+    .search-box {
+        font-size: 1rem; /* 調整搜尋框字體大小 */
+        padding: 12px 15px; /* 調整搜尋框內邊距 */
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+
+    .modal-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
     }
 }
